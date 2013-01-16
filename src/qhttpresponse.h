@@ -132,6 +132,11 @@ public slots:
     void end(const QString &data=QString());
 
     /*!
+     * End the Response and close Connection
+     */
+    void close(const QString &data=QString());
+
+    /*!
      * Set a response header @c field to @c value
      */
     void setHeader(const QString &field, const QString &value);
@@ -144,6 +149,16 @@ signals:
      * is scheduled for deletion at any time.
      */
     void done();
+
+    /*! Emitted once the response is finished.
+     * You should NOT interact with this object
+     * after done() has been emitted as the object
+     * is scheduled for deletion at any time.
+     *
+     * After emiting, connection is closed!
+     */
+    void closeConnection();
+
 
 private:
     QHttpResponse(QHttpConnection *connection);

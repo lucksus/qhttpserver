@@ -8,6 +8,7 @@
 #include <qhttpserver.h>
 #include <qhttprequest.h>
 #include <qhttpresponse.h>
+#include <qauthenticatorrealm.h>
 
 Responder::Responder(QHttpRequest *req, QHttpResponse *resp)
     : QObject(0)
@@ -56,7 +57,11 @@ void Responder::reply()
 
 BodyData::BodyData()
 {
+    QAuthenticatorRealm* realm = new QAuthenticatorRealm("my-realm");
+    realm->addCredential("user", "name");
+
     QHttpServer *server = new QHttpServer;
+    server->addAuthenticatorRealm(realm);
     server->listen(QHostAddress::Any, 5000);
     connect(server, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)),
             this, SLOT(handle(QHttpRequest*, QHttpResponse*)));

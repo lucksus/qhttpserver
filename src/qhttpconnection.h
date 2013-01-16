@@ -28,10 +28,12 @@
 
 #include <http_parser.h>
 
+
 class QTcpSocket;
 
 class QHttpRequest;
 class QHttpResponse;
+class QAuthenticatorRealm;
 
 typedef QHash<QString, QString> HeaderHash;
 
@@ -40,11 +42,13 @@ class QHttpConnection : public QObject
     Q_OBJECT
 
 public:
-    QHttpConnection(QTcpSocket *socket, QObject *parent = 0);
+    QHttpConnection(QTcpSocket *socket, QAuthenticatorRealm *realm = 0, QObject *parent = 0);
     virtual ~QHttpConnection();
 
     void write(const QByteArray &data);
     void flush();
+
+    QAuthenticatorRealm* getRealm();
 
 public slots:
     void dissonectFromHost();
@@ -64,6 +68,9 @@ private:
     static int HeadersComplete(http_parser *parser);
     static int Body(http_parser *parser, const char *at, size_t length);
     static int MessageComplete(http_parser *parser);
+    static int checkAuthentication(QAuthenticatorRealm *realm, QHttpRequest* request, QHttpResponse* response);
+    static int requestAuthenticationFromClient(QString realmName, QHttpRequest* request, QHttpResponse* response);
+    static int refuseUnauthenticatedConnection(QHttpRequest* request, QHttpResponse* response);
 
 private:
     QTcpSocket *m_socket;
@@ -78,6 +85,8 @@ private:
     HeaderHash m_currentHeaders;
     QString m_currentHeaderField;
     QString m_currentHeaderValue;
+    QAuthenticatorRealm* m_realm;
+    bool m_authorized;
 };
 
 #endif

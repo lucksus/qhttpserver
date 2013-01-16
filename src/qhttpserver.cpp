@@ -28,12 +28,14 @@
 #include <QDebug>
 
 #include "qhttpconnection.h"
+#include "qauthenticatorrealm.h"
 
 QHash<int, QString> STATUS_CODES;
 
 QHttpServer::QHttpServer(QObject *parent)
     : QObject(parent)
     , m_tcpServer(0)
+    , m_realm(0)
 {
 #define STATUS_CODE(num, reason) STATUS_CODES.insert(num, reason);
 // {{{
@@ -100,7 +102,7 @@ void QHttpServer::newConnection()
 {
     Q_ASSERT(m_tcpServer);
     while(m_tcpServer->hasPendingConnections()) {
-        QHttpConnection *connection = new QHttpConnection(m_tcpServer->nextPendingConnection(), this);
+        QHttpConnection *connection = new QHttpConnection(m_tcpServer->nextPendingConnection(), m_realm, this);
         connect(connection, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)),
                 this, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)));
     }
@@ -117,6 +119,12 @@ bool QHttpServer::listen(const QHostAddress &address, quint16 port)
 bool QHttpServer::listen(quint16 port)
 {
     return listen(QHostAddress::Any, port);
+}
+
+void QHttpServer::addAuthenticatorRealm(QAuthenticatorRealm *realm)
+{
+    m_realm = realm;
+    m_realm->setParent(this);
 }
 
 void QHttpServer::close()

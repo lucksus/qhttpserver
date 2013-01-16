@@ -31,6 +31,7 @@
 #include <QHostAddress>
 
 class QTcpServer;
+class QAuthenticatorRealm;
 
 class QHttpRequest;
 class QHttpResponse;
@@ -138,6 +139,12 @@ public:
     bool listen(quint16 port);
 
     /*!
+     *Add credential checker
+     *
+     */
+    void addAuthenticatorRealm(QAuthenticatorRealm *realm);
+
+    /*!
      * Stop listening for connections
      */
     void close();
@@ -225,6 +232,7 @@ private slots:
 
 private:
     QTcpServer *m_tcpServer;
+    QAuthenticatorRealm *m_realm;
 };
 
 #endif

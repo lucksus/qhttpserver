@@ -63,6 +63,8 @@ class QHttpRequest : public QObject
     Q_PROPERTY(QUrl    url           READ url);
     Q_PROPERTY(QString path          READ path);
     Q_PROPERTY(QString httpVersion   READ httpVersion);
+    Q_PROPERTY(QString username      READ username);
+    Q_PROPERTY(QString password      READ password);
     Q_ENUMS(HttpMethod);
 
 public:
@@ -194,6 +196,11 @@ public:
           Qt::UniqueConnection);
     }
 
+    const QString& username() const {return m_username; };
+
+
+    const QString& password() const {return m_password; };
+
 signals:
     /*!
      * This signal is emitted whenever body data is encountered
@@ -232,6 +239,8 @@ private:
     quint16 m_remotePort;
     QByteArray m_body;
     bool m_success;
+    QString m_username;
+    QString m_password;
 
     friend class QHttpConnection;
 

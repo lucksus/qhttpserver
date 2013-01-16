@@ -28,12 +28,15 @@
 
 #include "qhttprequest.h"
 #include "qhttpresponse.h"
+#include "qauthenticatorrealm.h"
 
-QHttpConnection::QHttpConnection(QTcpSocket *socket, QObject *parent)
+QHttpConnection::QHttpConnection(QTcpSocket *socket, QAuthenticatorRealm *realm, QObject *parent)
     : QObject(parent)
     , m_socket(socket)
     , m_parser(0)
     , m_request(0)
+    , m_realm(realm)
+    , m_authorized(false)
 {
     qDebug() << "Got new connection" << socket->peerAddress() << socket->peerPort();
 
@@ -83,7 +86,18 @@ void QHttpConnection::parseRequest()
     while(m_socket->bytesAvailable())
     {
         QByteArray arr = m_socket->readAll();
-        http_parser_execute(m_parser, &m_parserSettings, arr.constData(), arr.size());
+        size_t nparsed = http_parser_execute(m_parser, &m_parserSettings, arr.constData(), arr.size());
+
+        if (m_parser->upgrade) {
+            /*
+             * In case of websocket; Handle new protocol.
+             * Here just close the connection!
+             *
+             */
+            this->dissonectFromHost();
+        } else if (nparsed != arr.size()) {
+            this->dissonectFromHost();
+        }
     }
 }
 
@@ -95,6 +109,11 @@ void QHttpConnection::write(const QByteArray &data)
 void QHttpConnection::flush()
 {
     m_socket->flush();
+}
+
+QAuthenticatorRealm *QHttpConnection::getRealm()
+{
+    return this->m_realm;
 }
 
 void QHttpConnection::dissonectFromHost()
@@ -137,7 +156,14 @@ int QHttpConnection::HeadersComplete(http_parser *parser)
         response->m_keepAlive = false;
 
     connect(theConnection, SIGNAL(destroyed()), response, SLOT(connectionClosed()));
-    connect(response, SIGNAL(done()), theConnection, SLOT(dissonectFromHost()));
+    connect(response, SIGNAL(closeConnection()), theConnection, SLOT(dissonectFromHost()));
+
+    if (theConnection->getRealm() != 0 && !theConnection->m_authorized) {
+        if (checkAuthentication(theConnection->getRealm(), theConnection->m_request, response) != 0) {
+            return 0;
+        }
+        theConnection->m_authorized = true;
+    }
 
     // we are good to go!
     emit theConnection->newRequest(theConnection->m_request, response);
@@ -152,6 +178,44 @@ int QHttpConnection::MessageComplete(http_parser *parser)
 
     theConnection->m_request->setSuccessful(true);
     emit theConnection->m_request->end();
+    return 0;
+}
+
+int QHttpConnection::checkAuthentication(QAuthenticatorRealm* realm, QHttpRequest *request, QHttpResponse *response)
+{
+    QString auth_header = request->header("Authorization");
+    if (auth_header == 0) {
+        requestAuthenticationFromClient(realm->objectName(), request, response);
+        return 1;
+    }
+
+    QStringList auth_header_list = auth_header.split(" ");
+    if (auth_header_list.size() != 2 && auth_header_list.at(0) != "Basic") {
+        refuseUnauthenticatedConnection(request, response);
+        return 1;
+    }
+
+    if (!realm->authenticateUserBasic(auth_header_list.at(1))) {
+        refuseUnauthenticatedConnection(request, response);
+        return 1;
+    }
+    QStringList creds = realm->getUsernameAndPassword(auth_header_list.at(1));
+    request->m_username = creds.at(0);
+    request->m_password = creds.at(1);
+    return 0;
+}
+
+int QHttpConnection::requestAuthenticationFromClient(QString realmName, QHttpRequest *request, QHttpResponse *response)
+{
+    response->setHeader("WWW-Authenticate", QString("Basic realm=\"%1\"").arg(realmName));
+    response->writeHead(401);
+    response->close("Unauthorized");
+}
+
+int QHttpConnection::refuseUnauthenticatedConnection(QHttpRequest *request, QHttpResponse *response)
+{
+    response->writeHead(403);
+    response->close("Unauthorized request");
     return 0;
 }
 

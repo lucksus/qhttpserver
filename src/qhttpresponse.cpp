@@ -23,6 +23,7 @@
 #include "qhttpresponse.h"
 
 #include <QDateTime>
+#include <QDebug>
 
 #include "qhttpserver.h"
 #include "qhttpconnection.h"
@@ -52,7 +53,7 @@ void QHttpResponse::setHeader(const QString &field, const QString &value)
     if(m_finished) {
       return;
     }
-
+    qDebug() << QString("Added field %1 : %2\n").arg(field, value);
     m_headers[field] = value;
 }
 
@@ -61,10 +62,10 @@ void QHttpResponse::writeHeader(const char *field, const QString &value)
     if(m_finished) {
       return;
     }
-
+    qDebug() << QString("writeHeader: %1 : %2\n").arg(field).arg(value);
     m_connection->write(field);
     m_connection->write(": ");
-    m_connection->write(value.toUtf8());
+    m_connection->write(value.toLatin1());
     m_connection->write("\r\n");
 }
 
@@ -185,6 +186,18 @@ void QHttpResponse::end(const QString &data)
     emit done();
     deleteLater();
     // TODO: end connection and delete ourselves
+}
+
+void QHttpResponse::close(const QString& data)
+{
+    if (m_finished) {
+        return;
+    }
+    write(data);
+    m_finished = true;
+    emit done();
+    emit closeConnection();
+    deleteLater();
 }
 
 void QHttpResponse::connectionClosed()
