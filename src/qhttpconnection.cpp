@@ -97,6 +97,11 @@ void QHttpConnection::flush()
     m_socket->flush();
 }
 
+void QHttpConnection::dissonectFromHost()
+{
+    m_socket->disconnectFromHost();
+}
+
 /********************
  * Static Callbacks *
  *******************/
@@ -132,6 +137,7 @@ int QHttpConnection::HeadersComplete(http_parser *parser)
         response->m_keepAlive = false;
 
     connect(theConnection, SIGNAL(destroyed()), response, SLOT(connectionClosed()));
+    connect(response, SIGNAL(done()), theConnection, SLOT(dissonectFromHost()));
 
     // we are good to go!
     emit theConnection->newRequest(theConnection->m_request, response);
@@ -154,7 +160,7 @@ int QHttpConnection::Url(http_parser *parser, const char *at, size_t length)
     QHttpConnection *theConnection = (QHttpConnection *)parser->data;
     Q_ASSERT(theConnection->m_request);
 
-    QString url = QString::fromAscii(at, length);
+    QString url = QString::fromLatin1(at, length);
     theConnection->m_request->setUrl(QUrl(url));
     return 0;
 }
@@ -177,7 +183,7 @@ int QHttpConnection::HeaderField(http_parser *parser, const char *at, size_t len
         theConnection->m_currentHeaderValue = QString();
     }
 
-    QString fieldSuffix = QString::fromAscii(at, length);
+    QString fieldSuffix = QString::fromLatin1(at, length);
     theConnection->m_currentHeaderField += fieldSuffix;
     return 0;
 }
@@ -187,7 +193,7 @@ int QHttpConnection::HeaderValue(http_parser *parser, const char *at, size_t len
     QHttpConnection *theConnection = (QHttpConnection *)parser->data;
     Q_ASSERT(theConnection->m_request);
 
-    QString valueSuffix = QString::fromAscii(at, length);
+    QString valueSuffix = QString::fromLatin1(at, length);
     theConnection->m_currentHeaderValue += valueSuffix;
     return 0;
 }

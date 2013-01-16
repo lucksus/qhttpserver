@@ -46,6 +46,9 @@ public:
     void write(const QByteArray &data);
     void flush();
 
+public slots:
+    void dissonectFromHost();
+
 signals:
     void newRequest(QHttpRequest*, QHttpResponse*);
 
