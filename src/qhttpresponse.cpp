@@ -53,7 +53,7 @@ void QHttpResponse::setHeader(const QString &field, const QString &value)
     if(m_finished) {
       return;
     }
-    qDebug() << QString("Added field %1 : %2\n").arg(field, value);
+    //qDebug() << QString("Added field %1 : %2\n").arg(field, value);
     m_headers[field] = value;
 }
 
@@ -62,7 +62,7 @@ void QHttpResponse::writeHeader(const char *field, const QString &value)
     if(m_finished) {
       return;
     }
-    qDebug() << QString("writeHeader: %1 : %2\n").arg(field).arg(value);
+    //qDebug() << QString("writeHeader: %1 : %2\n").arg(field).arg(value);
     m_connection->write(field);
     m_connection->write(": ");
     m_connection->write(value.toLatin1());
