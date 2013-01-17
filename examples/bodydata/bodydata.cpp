@@ -24,12 +24,12 @@ Responder::Responder(QHttpRequest *req, QHttpResponse *resp)
 
         QString reply = tr("<html><head><title>BodyData App</title></head><body><h1>Hello  %1!</h1><p>").arg(name);
         resp->write(reply);
-        resp->end(QString("</p></body></html>").toLatin1());
+        resp->close(QString("</p></body></html>").toLatin1());
     }
     else
     {
         resp->writeHead(403);
-        resp->end("You aren't allowed here!");
+        resp->close("You aren't allowed here!");
         // TODO: there should be a way to tell request to stop streaming data
         return;
     }

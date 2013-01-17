@@ -19,7 +19,7 @@ void Hello::handle(QHttpRequest *req, QHttpResponse *resp)
     resp->setHeader("Content-Length", "11");
     resp->writeHead(200);
     resp->write(QString("Hello World"));
-    resp->end();
+    resp->close();
 }
 
 int main(int argc, char **argv)

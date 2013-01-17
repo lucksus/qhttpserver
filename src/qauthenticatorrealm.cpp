@@ -12,7 +12,7 @@ QStringList QAuthenticatorRealm::getUsernameAndPassword(QString cred)
     QByteArray decoded_cred_byte = QByteArray::fromBase64(plain_cred);
     QString decoded_cred = QString::fromLatin1(decoded_cred_byte);
 
-    QStringList credentials = decoded_cred.split(",", QString::SkipEmptyParts);
+    QStringList credentials = decoded_cred.split(":", QString::SkipEmptyParts);
     if (credentials.size() <= 1 || credentials.size() > 2) { //No Element or multi elements parsed
         QStringList empty;
         return empty;

@@ -183,7 +183,7 @@ int QHttpConnection::MessageComplete(http_parser *parser)
 
 int QHttpConnection::checkAuthentication(QAuthenticatorRealm* realm, QHttpRequest *request, QHttpResponse *response)
 {
-    QString auth_header = request->header("Authorization");
+    QString auth_header = request->header("authorization");
     if (auth_header == 0) {
         requestAuthenticationFromClient(realm->objectName(), request, response);
         return 1;
