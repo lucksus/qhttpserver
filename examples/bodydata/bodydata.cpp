@@ -61,6 +61,10 @@ BodyData::BodyData()
     realm->addCredential("user", "name");
 
     QHttpServer *server = new QHttpServer;
+    QString certificateFile(":/test.crt");
+    QString keyFile(":/test.key");
+    server->enableSsl(certificateFile, keyFile);
+
     server->addAuthenticatorRealm(realm);
     server->listen(QHostAddress::Any, 5000);
     connect(server, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)),

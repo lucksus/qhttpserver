@@ -29,12 +29,17 @@
 
 #include <QObject>
 #include <QHostAddress>
+#include <QSsl>
 
 class QTcpServer;
 class QAuthenticatorRealm;
 
 class QHttpRequest;
 class QHttpResponse;
+class QSslCertificate;
+class QSslKey;
+
+class SslServer;
 
 /*!
  * A map of request or response headers
@@ -149,6 +154,17 @@ public:
      */
     void close();
 
+    /*!
+     * \brief enableSsl
+     */
+    void enableSsl(QString sslCertificatePath, QString sslKeyPath);
+
+    /*!
+     * \brief disableSsl
+     */
+    void disableSsl();
+
+
 signals:
     /*!
      * This signal is emitted whenever a client
@@ -227,12 +243,21 @@ signals:
      */
     void newRequest(QHttpRequest *request, QHttpResponse *response);
 
+protected:
+    bool setPrivateKey(const QString &fileName, QSsl::KeyAlgorithm algorithm = QSsl::Rsa,
+                       QSsl::EncodingFormat format = QSsl::Pem,
+                       const QByteArray &passPhrase = QByteArray());
+
 private slots:
     void newConnection();
 
 private:
     QTcpServer *m_tcpServer;
+    SslServer *m_sslServer;
     QAuthenticatorRealm *m_realm;
+    bool m_useSsl;
+    QSslCertificate *m_sslCertificate;
+    QSslKey *m_sslKey;
 };
 
 #endif

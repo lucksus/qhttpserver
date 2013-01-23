@@ -26,16 +26,24 @@
 #include <QTcpSocket>
 #include <QVariant>
 #include <QDebug>
+#include <QSslCertificate>
+#include <QSslKey>
+#include <QFile>
 
 #include "qhttpconnection.h"
 #include "qauthenticatorrealm.h"
+#include "sslserver.h"
 
 QHash<int, QString> STATUS_CODES;
 
 QHttpServer::QHttpServer(QObject *parent)
     : QObject(parent)
     , m_tcpServer(0)
+    , m_sslServer(0)
     , m_realm(0)
+    , m_useSsl(false)
+    , m_sslCertificate(0)
+    , m_sslKey(0)
 {
 #define STATUS_CODE(num, reason) STATUS_CODES.insert(num, reason);
 // {{{
@@ -96,24 +104,43 @@ QHttpServer::QHttpServer(QObject *parent)
 
 QHttpServer::~QHttpServer()
 {
+    if (m_sslCertificate != 0) {
+        delete m_sslCertificate;
+    }
+    if (m_sslKey != 0) {
+        delete m_sslKey;
+    }
 }
 
 void QHttpServer::newConnection()
 {
-    Q_ASSERT(m_tcpServer);
-    while(m_tcpServer->hasPendingConnections()) {
-        QHttpConnection *connection = new QHttpConnection(m_tcpServer->nextPendingConnection(), m_realm, this);
-        connect(connection, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)),
-                this, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)));
+    //Q_ASSERT(m_tcpServer);
+    if (m_useSsl) {
+        while(m_sslServer->hasPendingConnections()) {
+            QHttpConnection *connection = new QHttpConnection(m_sslServer->nextPendingConnection(), m_realm, this);
+            connect(connection, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)),
+                    this, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)));
+        }
+    } else{
+        while(m_tcpServer->hasPendingConnections()) {
+            QHttpConnection *connection = new QHttpConnection(m_tcpServer->nextPendingConnection(), m_realm, this);
+            connect(connection, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)),
+                    this, SIGNAL(newRequest(QHttpRequest*, QHttpResponse*)));
+        }
     }
 }
 
 bool QHttpServer::listen(const QHostAddress &address, quint16 port)
 {
-    m_tcpServer = new QTcpServer;
-
-    connect(m_tcpServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
-    return m_tcpServer->listen(address, port);
+    if (m_useSsl) {
+        m_sslServer = new SslServer(*m_sslCertificate, *m_sslKey, this);
+        connect(m_sslServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
+        return m_sslServer->listen(address, port);
+    } else {
+        m_tcpServer = new QTcpServer(this);
+        connect(m_tcpServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
+        return m_tcpServer->listen(address, port);
+    }
 }
 
 bool QHttpServer::listen(quint16 port)
@@ -129,5 +156,37 @@ void QHttpServer::addAuthenticatorRealm(QAuthenticatorRealm *realm)
 
 void QHttpServer::close()
 {
-  m_tcpServer->close();
+    m_tcpServer->close();
+}
+
+void QHttpServer::enableSsl(QString sslCertificatePath, QString sslKeyPath)
+{
+    QList<QSslCertificate> certificates = QSslCertificate::fromPath(sslCertificatePath);
+    if (certificates.length() == 0) {
+        qDebug() << QString("Could not parse SSL Certificate!");
+        return;
+    }
+    m_sslCertificate = new QSslCertificate(certificates.at(0));
+
+    if (this->setPrivateKey(sslKeyPath)) {
+        m_useSsl = true;
+    }
+
+
+}
+
+bool QHttpServer::setPrivateKey(const QString &fileName, QSsl::KeyAlgorithm algorithm, QSsl::EncodingFormat format, const QByteArray &passPhrase)
+{
+    QFile file(fileName);
+    if (file.open(QIODevice::ReadOnly)) {
+        m_sslKey = new QSslKey(file.readAll(), algorithm,
+                                              format, QSsl::PrivateKey, passPhrase);
+        if (m_sslKey == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    } else {
+        return false;
+    }
 }

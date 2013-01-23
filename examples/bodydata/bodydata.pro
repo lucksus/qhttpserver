@@ -7,3 +7,6 @@ LIBS += -L../../lib -lqhttpserver
 
 SOURCES=bodydata.cpp
 HEADERS=bodydata.h
+
+RESOURCES += \
+    bodydata.qrc

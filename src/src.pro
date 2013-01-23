@@ -30,3 +30,12 @@ INSTALLS += target headers
 
 HEADERS += \
     qauthenticatorrealm.h
+
+HEADERS += \
+    qsslserver.h
+
+HEADERS += \
+    qhttpsconnection.h
+
+HEADERS += \
+    sslserver.h
